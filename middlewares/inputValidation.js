@@ -99,10 +99,8 @@ export const articleSchema = z.object({
     })
     .min(1, "Category ID is required"),
   tags: z.string().optional(),
-  isPopular: z.boolean().optional(),
-  showOnTop: z.boolean().optional(),
+  publishedAt: z.string().optional(),
   isPublished: z.boolean().optional(),
-  showOnHomePage: z.boolean().optional(),
   author: z
     .string({
       required_error: "Author ID is required",

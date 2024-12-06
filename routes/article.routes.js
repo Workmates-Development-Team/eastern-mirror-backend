@@ -34,6 +34,5 @@ router.delete(
 );
 router.get("/all", ArticleController.getAll);
 router.get("/by/:slug", ArticleController.getBySlug);
-router.get("/all/data", ArticleController.get);
 
 export default router;

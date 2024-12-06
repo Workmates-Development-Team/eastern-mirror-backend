@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import schedule from "node-schedule";
 
 const articleSchema = new mongoose.Schema(
   {
@@ -26,21 +27,6 @@ const articleSchema = new mongoose.Schema(
 
     tags: [{ type: String }],
 
-    isPopular: {
-      type: Boolean,
-      default: false,
-    },
-
-    showOnTop: {
-      type: Boolean,
-      default: false,
-    },
-
-    showOnHomePage: {
-      type: Boolean,
-      default: false,
-    },
-
     isPublished: {
       type: Boolean,
       default: false,
@@ -56,6 +42,7 @@ const articleSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
     publishedAt: {
       type: Date,
       default: Date.now,
@@ -65,5 +52,38 @@ const articleSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+articleSchema.pre("save", function (next) {
+  const now = new Date();
+  console.log(this.publishedAt)
+  console.log(now)
+  console.log(this.publishedAt > now)
+  
+  if (this.publishedAt > now) {
+    console.log(`Scheduling publish job for ${this.publishedAt}`);
+
+    this.isPublished = false;
+
+    // Convert `publishedAt` to UTC
+    const publishedAtUtc = new Date(this.publishedAt).toISOString();
+
+    console.log(`Job scheduled for UTC time: ${publishedAtUtc}`);
+    
+    // Schedule job to publish the article at the given time
+    schedule.scheduleJob(publishedAtUtc, async () => {
+      console.log(`Publishing article with ID: ${this._id} at ${new Date()}`);
+      
+      await mongoose.model("Article").findByIdAndUpdate(this._id, {
+        isPublished: true,
+      });
+    });
+  } else {
+    
+    console.log(`Article published immediately: ${this.publishedAt}`);
+  }
+
+  next();
+});
+
 
 export default mongoose.model("Article", articleSchema);
