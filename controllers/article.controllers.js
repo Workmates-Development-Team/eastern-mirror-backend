@@ -215,6 +215,125 @@ class ArticleController {
     }
   }
 
+  // static async getAll(req, res) {
+  //   try {
+  //     const {
+  //       page = 1,
+  //       limit = 10,
+  //       sort = "publishedAt",
+  //       order = "desc",
+  //       search = "",
+  //       category = "",
+  //       author = "",
+  //       tag = "",
+  //       startDate = "",
+  //       endDate = "",
+  //       admin = null,
+  //     } = req.query;
+
+  //     const query = {};
+
+  //     // Search filter
+  //     if (search) {
+  //       query.$or = [
+  //         { title: { $regex: search, $options: "i" } },
+  //         { content: { $regex: search, $options: "i" } },
+  //       ];
+  //     }
+
+  //     if (admin !== "true") {
+  //       query.isPublished = true;
+  //     }
+
+  //     // Category filter (including child categories)
+  //     if (category) {
+  //       const categoryObj = await categoryModels.findOne({ slug: category });
+  //       if (!categoryObj) {
+  //         return res.status(200).json({
+  //           articles: [],
+  //           totalPages: 0,
+  //           currentPage: 1,
+  //         });
+  //       }
+
+  //       const categoryIds = [categoryObj._id];
+
+  //       // Fetch all child categories recursively
+  //       const getChildCategories = async (parentId) => {
+  //         const children = await categoryModels.find({ parent: parentId });
+  //         if (children.length > 0) {
+  //           children.forEach((child) => categoryIds.push(child._id));
+  //           for (const child of children) {
+  //             await getChildCategories(child._id); // Recursively fetch child categories
+  //           }
+  //         }
+  //       };
+
+  //       await getChildCategories(categoryObj._id);
+
+  //       query.category = { $in: categoryIds };
+  //     }
+
+  //     // Author filter
+  //     if (author) {
+  //       const authorInfo = await authorModels.findOne({ username: author });
+  //       if (!authorInfo) {
+  //         return res.status(200).json({
+  //           articles: [],
+  //           totalPages: 0,
+  //           currentPage: 1,
+  //         });
+  //       }
+  //       query.author = authorInfo._id;
+  //     }
+
+  //     // Tag filter
+  //     if (tag) {
+  //       const normalizedTag = tag.replace(/-/g, " ");
+  //       query.tags = {
+  //         $elemMatch: {
+  //           $regex: `^${normalizedTag}$`,
+  //           $options: "i",
+  //         },
+  //       };
+  //     }
+
+  //     // Date range filter
+  //     if (startDate || endDate) {
+  //       query.createdAt = {};
+  //       if (startDate) {
+  //         query.createdAt.$gte = new Date(startDate);
+  //       }
+  //       if (endDate) {
+  //         query.createdAt.$lte = new Date(endDate);
+  //       }
+  //     }
+
+  //     // Fetch articles
+  //     const articles = await articleModels
+  //       .find(query)
+  //       .populate({
+  //         path: "category",
+  //         select: "name",
+  //       })
+  //       .populate("author", "name username")
+  //       .sort({ [sort]: order })
+  //       .skip((page - 1) * limit)
+  //       .limit(parseInt(limit));
+
+  //     // Count total articles
+  //     const totalArticles = await articleModels.countDocuments(query);
+
+  //     res.status(200).json({
+  //       articles,
+  //       totalPages: Math.ceil(totalArticles / limit),
+  //       currentPage: parseInt(page),
+  //     });
+  //   } catch (error) {
+  //     res.status(500).json({ message: error.message });
+  //   }
+  // }
+
   static async getAll(req, res) {
     try {
       const {
@@ -230,21 +349,19 @@ class ArticleController {
         endDate = "",
         admin = null,
       } = req.query;
-
+  
       const query = {};
-
-      // Search filter
+  
+      // Search filter using text index
       if (search) {
-        query.$or = [
-          { title: { $regex: search, $options: "i" } },
-          { content: { $regex: search, $options: "i" } },
-        ];
+        query.$text = { $search: search };
       }
-
+  
+      // Admin filter for published status
       if (admin !== "true") {
         query.isPublished = true;
       }
-
+  
       // Category filter (including child categories)
       if (category) {
         const categoryObj = await categoryModels.findOne({ slug: category });
@@ -255,25 +372,25 @@ class ArticleController {
             currentPage: 1,
           });
         }
-
+  
         const categoryIds = [categoryObj._id];
-
+  
         // Fetch all child categories recursively
         const getChildCategories = async (parentId) => {
           const children = await categoryModels.find({ parent: parentId });
           if (children.length > 0) {
             children.forEach((child) => categoryIds.push(child._id));
             for (const child of children) {
-              await getChildCategories(child._id); // Recursively fetch child categories
+              await getChildCategories(child._id);
             }
           }
         };
-
+  
         await getChildCategories(categoryObj._id);
-
+  
         query.category = { $in: categoryIds };
       }
-
+  
       // Author filter
       if (author) {
         const authorInfo = await authorModels.findOne({ username: author });
@@ -286,7 +403,7 @@ class ArticleController {
         }
         query.author = authorInfo._id;
       }
-
+  
       // Tag filter
       if (tag) {
         const normalizedTag = tag.replace(/-/g, " ");
@@ -297,7 +414,7 @@ class ArticleController {
           },
         };
       }
-
+  
       // Date range filter
       if (startDate || endDate) {
         query.createdAt = {};
@@ -308,31 +425,82 @@ class ArticleController {
           query.createdAt.$lte = new Date(endDate);
         }
       }
-
-      // Fetch articles
-      const articles = await articleModels
-        .find(query)
-        .populate({
-          path: "category",
-          select: "name",
-        })
-        .populate("author", "name username")
-        .sort({ [sort]: order })
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit));
-
-      // Count total articles
-      const totalArticles = await articleModels.countDocuments(query);
-
+  
+      // Sorting
+      const sortOptions = { [sort]: order === "desc" ? -1 : 1 };
+  
+      // Fetch articles and count
+      const [articles, totalArticles] = await Promise.all([
+        articleModels
+          .find(query)
+          .select("title content publishedAt slug isPublished tags thumbnail")
+          .populate("category", "name -_id")
+          .populate("author", "name username -_id")
+          .sort(sortOptions)
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit))
+          .lean(), // Faster read
+        articleModels.countDocuments(query),
+      ]);
+  
       res.status(200).json({
         articles,
         totalPages: Math.ceil(totalArticles / limit),
         currentPage: parseInt(page),
       });
     } catch (error) {
+      console.error(error);
       res.status(500).json({ message: error.message });
     }
   }
+  
+
+  static async searchArticle(req, res) {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        sort = "publishedAt",
+        order = "desc",
+        search = "",
+      } = req.query;
+  
+      const query = {};
+      if (search) {
+        query.$text = { $search: search };
+      }
+  
+      // Sorting
+      const sortOptions = {};
+      sortOptions[sort] = order === "desc" ? -1 : 1;
+  
+      // Fetch articles and count in parallel
+      const [articles, totalArticles] = await Promise.all([
+        articleModels
+          .find(query)
+          .select("title publishedAt slug isPublished tags thumbnail")
+          .populate("category", "name -_id")
+          .populate("author", "name username -_id")
+          .sort(sortOptions)
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit))
+          .lean(),
+        articleModels.countDocuments(query),
+      ]);
+  
+      const result = {
+        articles,
+        totalPages: Math.ceil(totalArticles / limit),
+        currentPage: parseInt(page),
+      };
+  
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+  
+  
 
   static async getBySlug(req, res) {
     try {

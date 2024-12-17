@@ -53,11 +53,16 @@ const articleSchema = new mongoose.Schema(
   }
 );
 
+articleSchema.index({ title: "text", content: "text" }); // Text index for search
+articleSchema.index({ slug: 1 }); // Unique index for slugs
+articleSchema.index({ publishedAt: -1 }); // Sorting index
+articleSchema.index({ category: 1 }); // Index for filtering by category
+articleSchema.index({ author: 1 }); // Index for querying by author
+articleSchema.index({ isPublished: 1 }); 
+
 articleSchema.pre("save", function (next) {
   const now = new Date();
-  console.log(this.publishedAt)
-  console.log(now)
-  console.log(this.publishedAt > now)
+ 
   
   if (this.publishedAt > now) {
     console.log(`Scheduling publish job for ${this.publishedAt}`);

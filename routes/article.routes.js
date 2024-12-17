@@ -33,6 +33,7 @@ router.delete(
   ArticleController.delete
 );
 router.get("/all", ArticleController.getAll);
+router.get("/search", ArticleController.searchArticle);
 router.get("/by/:slug", ArticleController.getBySlug);
 
 export default router;
