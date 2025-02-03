@@ -8,6 +8,7 @@ import galleryRoutes from './gallery.routes.js'
 import videoRoutes from './video.routes.js'
 import contactRoutes from './contact.routes.js'
 import eventRoutes from './event.routes.js'
+import adsRoutes from './ads.routes.js'
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/gallery', galleryRoutes)
 router.use('/video', videoRoutes)
 router.use('/contact', contactRoutes)
 router.use('/event', eventRoutes)
+router.use('/ads', adsRoutes)
 
 export default router;

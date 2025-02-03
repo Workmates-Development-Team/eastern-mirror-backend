@@ -80,10 +80,8 @@ class UserController {
       });
 
       res.status(200).json({
-        // message: "OTP sent to your phone number",
-        // phoneNumber: admin.phoneNumber,
         token,
-        admin: { id: admin.id, name: admin.name, email: admin.email },
+        admin: { _id: admin._id, name: admin.name, email: admin.email,  userType: admin.userType},
       });
     } catch (error) {
       if (error instanceof z.ZodError) {

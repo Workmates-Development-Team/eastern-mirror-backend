@@ -121,3 +121,17 @@ export const videoSchema = z.object({
     })
     .url("Link must be a valid URL"),
 });
+
+export const adsSchema = z.object({
+  imageUrl: z
+    .string({
+      required_error: "Image is required",
+    })
+    .min(1, "Image is required"),
+
+  link: z
+    .string({
+      required_error: "Link is required",
+    })
+    .url("Link must be a valid URL"),
+});

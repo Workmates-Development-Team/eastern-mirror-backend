@@ -36,4 +36,18 @@ const thumbnailStorage = multer.diskStorage({
   },
 });
 
+const adsStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, "..", "uploads/ads");
+    ensureDirectoryExistence(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = Date.now() + ext;
+    cb(null, filename);
+  },
+});
+
 export const thumbnailUpload = multer({ storage: thumbnailStorage });
+export const adsUpload = multer({ storage: adsStorage });
