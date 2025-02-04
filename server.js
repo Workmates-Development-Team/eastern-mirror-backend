@@ -3,6 +3,8 @@ import "dotenv/config";
 import cors from "cors";
 import connectDB from "./config/db.config.js";
 import rootRoute from "./routes/index.routes.js";
+import articleModels from "./models/article.models.js";
+import mongoose from "mongoose";
 
 
 const app = express();

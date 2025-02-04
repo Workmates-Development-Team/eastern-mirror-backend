@@ -456,6 +456,7 @@ class ArticleController {
   
 
   static async searchArticle(req, res) {
+    console.log('object')
     try {
       const {
         page = 1,
@@ -467,7 +468,8 @@ class ArticleController {
   
       const query = {};
       if (search) {
-        query.$text = { $search: search };
+        // query.$text = { $search: search };
+        query.title = { $regex: search, $options: "i" };
       }
   
       // Sorting
