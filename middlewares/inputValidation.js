@@ -92,6 +92,11 @@ export const articleSchema = z.object({
       required_error: "Content is required",
     })
     .min(1, "Content is required"),
+  plainTextContent: z
+    .string({
+      required_error: "plainTextContent is required",
+    })
+    .min(1, "plainTextContent is required"),
   thumbnail: z.string().optional(),
   category: z
     .string({
