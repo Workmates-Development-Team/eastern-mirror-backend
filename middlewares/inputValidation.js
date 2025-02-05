@@ -104,6 +104,8 @@ export const articleSchema = z.object({
     })
     .min(1, "Category ID is required"),
   tags: z.string().optional(),
+  excerpt: z.string().optional(),
+  metaKeyWord: z.string().optional(),
   publishedAt: z.string().optional(),
   isPublished: z.boolean().optional(),
   author: z

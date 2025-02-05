@@ -19,7 +19,9 @@ class ArticleController {
         thumbnail,
         publishedAt,
         slug,
-        plainTextContent
+        plainTextContent,
+        metaKeyWord,
+        excerpt
       } = articleSchema.parse(req.body);
 
       const authorExists = await authorModels.findById(author);
@@ -40,7 +42,9 @@ class ArticleController {
         publishedAt,
         author,
         slug,
-        plainTextContent
+        plainTextContent,
+        excerpt,
+        metaKeyWord: JSON.parse(metaKeyWord)
       });
 
       await article.save();
@@ -82,7 +86,9 @@ class ArticleController {
         publishedAt,
         slug,
         thumbnail,
-        plainTextContent
+        plainTextContent,
+        metaKeyWord,
+        excerpt
       } = articleSchema.parse(req.body);
 
       // Check if author exists
@@ -105,6 +111,8 @@ class ArticleController {
       article.publishedAt = publishedAt;
       article.author = author;
       article.slug = slug;
+      article.metaKeyWord = JSON.parse(metaKeyWord);
+      article.excerpt = excerpt;
 
       // Save updated article
       await article.save();
