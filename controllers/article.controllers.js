@@ -21,7 +21,7 @@ class ArticleController {
         slug,
         plainTextContent,
         metaKeyWord,
-        excerpt
+        excerpt,
       } = articleSchema.parse(req.body);
 
       const authorExists = await authorModels.findById(author);
@@ -44,7 +44,7 @@ class ArticleController {
         slug,
         plainTextContent,
         excerpt,
-        metaKeyWord: JSON.parse(metaKeyWord)
+        metaKeyWord: JSON.parse(metaKeyWord),
       });
 
       await article.save();
@@ -88,7 +88,7 @@ class ArticleController {
         thumbnail,
         plainTextContent,
         metaKeyWord,
-        excerpt
+        excerpt,
       } = articleSchema.parse(req.body);
 
       // Check if author exists
@@ -209,6 +209,7 @@ class ArticleController {
       });
     } catch (error) {
       res.status(500).json({ message: error.message });
+      console.log(error);
     }
   }
 
@@ -242,19 +243,20 @@ class ArticleController {
         endDate = "",
         admin = null,
       } = req.query;
-  
+
       const query = {};
-  
+
       // Search filter using text index
       if (search) {
-        query.$text = { $search: search };
+        // query.$text = { $search: search };
+        query.title = { $regex: search, $options: "i" };
       }
-  
+
       // Admin filter for published status
       if (admin !== "true") {
         query.isPublished = true;
       }
-  
+
       // Category filter (including child categories)
       if (category) {
         const categoryObj = await categoryModels.findOne({ slug: category });
@@ -265,9 +267,9 @@ class ArticleController {
             currentPage: 1,
           });
         }
-  
+
         const categoryIds = [categoryObj._id];
-  
+
         // Fetch all child categories recursively
         const getChildCategories = async (parentId) => {
           const children = await categoryModels.find({ parent: parentId });
@@ -278,12 +280,12 @@ class ArticleController {
             }
           }
         };
-  
+
         await getChildCategories(categoryObj._id);
-  
+
         query.category = { $in: categoryIds };
       }
-  
+
       // Author filter
       if (author) {
         const authorInfo = await authorModels.findOne({ username: author });
@@ -296,7 +298,7 @@ class ArticleController {
         }
         query.author = authorInfo._id;
       }
-  
+
       // Tag filter
       if (tag) {
         const normalizedTag = tag.replace(/-/g, " ");
@@ -307,7 +309,7 @@ class ArticleController {
           },
         };
       }
-  
+
       // Date range filter
       if (startDate || endDate) {
         query.createdAt = {};
@@ -318,10 +320,10 @@ class ArticleController {
           query.createdAt.$lte = new Date(endDate);
         }
       }
-  
+
       // Sorting
       const sortOptions = { [sort]: order === "desc" ? -1 : 1 };
-  
+
       // Fetch articles and count
       const [articles, totalArticles] = await Promise.all([
         articleModels
@@ -335,7 +337,7 @@ class ArticleController {
           .lean(), // Faster read
         articleModels.countDocuments(query),
       ]);
-  
+
       res.status(200).json({
         articles,
         totalPages: Math.ceil(totalArticles / limit),
@@ -346,10 +348,9 @@ class ArticleController {
       res.status(500).json({ message: error.message });
     }
   }
-  
 
   static async searchArticle(req, res) {
-    console.log('object')
+    console.log("object");
     try {
       const {
         page = 1,
@@ -358,17 +359,17 @@ class ArticleController {
         order = "desc",
         search = "",
       } = req.query;
-  
+
       const query = {};
       if (search) {
         // query.$text = { $search: search };
         query.title = { $regex: search, $options: "i" };
       }
-  
+
       // Sorting
       const sortOptions = {};
       sortOptions[sort] = order === "desc" ? -1 : 1;
-  
+
       // Fetch articles and count in parallel
       const [articles, totalArticles] = await Promise.all([
         articleModels
@@ -382,20 +383,18 @@ class ArticleController {
           .lean(),
         articleModels.countDocuments(query),
       ]);
-  
+
       const result = {
         articles,
         totalPages: Math.ceil(totalArticles / limit),
         currentPage: parseInt(page),
       };
-  
+
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   }
-  
-  
 
   static async getBySlug(req, res) {
     try {
