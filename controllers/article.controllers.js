@@ -29,6 +29,16 @@ class ArticleController {
         return res.status(400).json({ message: "Invalid author ID" });
       }
 
+      let uniqueSlug = slug;
+      let slugExists = await articleModels.findOne({ slug: uniqueSlug });
+      
+      while (slugExists) {
+        const randomString = Math.random().toString(36).substring(2, 7); // Generate a random string
+        uniqueSlug = `${slug}-${randomString}`;
+        slugExists = await articleModels.findOne({ slug: uniqueSlug });
+      }
+  
+
       const article = new articleModels({
         title,
         content,
@@ -41,7 +51,7 @@ class ArticleController {
         isPublished: true,
         publishedAt,
         author,
-        slug,
+        slug: uniqueSlug,
         plainTextContent,
         excerpt,
         metaKeyWord: JSON.parse(metaKeyWord),
