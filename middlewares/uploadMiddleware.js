@@ -31,7 +31,8 @@ const thumbnailStorage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const filename = Date.now() + ext;
+    const name = path.basename(file.originalname, ext);
+    const filename = `${name}-${Date.now()}${ext}`;
     cb(null, filename);
   },
 });
