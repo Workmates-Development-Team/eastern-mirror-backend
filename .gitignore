@@ -91,3 +91,4 @@ public
 
 # Uploads
 /uploads
+.env
