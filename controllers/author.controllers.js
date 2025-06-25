@@ -4,6 +4,7 @@ import { authorSchema } from "../middlewares/inputValidation.js";
 import { getFilePath } from "../utils/helper.js";
 import path from "path";
 import fs from "fs";
+import { uploadToS3 } from "../utils/uploadToS3.js";
 
 const generateUniqueUsername = async (baseUsername) => {
   let username = baseUsername;
@@ -27,14 +28,6 @@ class AuthorController {
 
       const existingAuthor = await authorModels.findOne({ email });
       if (existingAuthor) {
-        if (req.file) {
-          const filePath = getFilePath(req.file.filename);
-          fs.unlink(filePath, (err) => {
-            if (err) {
-              console.error("Failed to delete the file:", err);
-            }
-          });
-        }
         return res
           .status(400)
           .json({ message: "Author with this email already exists" });
@@ -42,7 +35,12 @@ class AuthorController {
 
       let avatar = "";
       if (req.file) {
-        avatar = `/avatar/${req.file.filename}`;
+        const avatarPath = await uploadToS3(
+          req.file.buffer,
+          req.file.originalname,
+          "avatar"
+        );
+        avatar = avatarPath;
       }
 
       const baseUsername = name.toLowerCase().replace(/\s+/g, "-");
@@ -59,20 +57,7 @@ class AuthorController {
 
       res.status(201).json({ message: "Author created successfully", author });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        if (req.file) {
-          const filePath = getFilePath(req.file.filename);
-          fs.unlink(filePath, (err) => {
-            if (err) {
-              console.error("Failed to delete the file:", err);
-            }
-          });
-        }
-
-        return res
-          .status(400)
-          .json({ message: error.errors[0]?.message || "Validation error" });
-      }
+ 
       res.status(500).json({ message: error.message });
     }
   }
@@ -95,15 +80,21 @@ class AuthorController {
 
       if (req.file) {
         if (existingAuthor.avatar) {
-          const oldFilePath = getFilePath(path.basename(existingAuthor.avatar));
-          fs.unlink(oldFilePath, (err) => {
-            if (err) {
-              console.error("Failed to delete the old avatar:", err);
-            }
-          });
+          const oldS3Key = `images${existingAuthor.avatar}`; // e.g. images/avatar/xyz.jpg
+          try {
+            await s3Client.send(
+              new DeleteObjectCommand({
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: oldS3Key,
+              })
+            );
+          } catch (err) {
+            console.error("Failed to delete old avatar:", err);
+          }
         }
 
-        updateData.avatar = `/avatar/${req.file.filename}`;
+        const newAvatar = await uploadToS3(req.file.buffer, req.file.originalname, "avatar");
+        updateData.avatar = newAvatar;
       }
 
       // Update the author
@@ -148,11 +139,7 @@ class AuthorController {
 
   static async getAll(req, res) {
     try {
-      const {
-        search = "",
-        sortBy = "createdAt",
-        sortOrder = "-1",
-      } = req.query;
+      const { search = "", sortBy = "createdAt", sortOrder = "-1" } = req.query;
 
       // Build search query
       const searchQuery = {
@@ -169,7 +156,7 @@ class AuthorController {
 
       const authors = await authorModels
         .find(searchQuery)
-        .sort({ [sortBy]: Number(sortOrder) })
+        .sort({ [sortBy]: Number(sortOrder) });
 
       res.status(200).json({ authors });
     } catch (error) {

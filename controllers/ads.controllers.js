@@ -5,6 +5,8 @@ import { getFilePath3 } from "../utils/helper.js";
 import path from "path";
 import fs from "fs";
 import mongoose from "mongoose";
+import { s3Client, uploadToS3 } from "../utils/uploadToS3.js";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 class AdsController {
   static async addAds(req, res) {
@@ -19,9 +21,13 @@ class AdsController {
         return res.status(400).json({ message: "Name is required" });
       }
 
-      let url = `/ads/${req.file.filename}`;
+      const relativePath = await uploadToS3(
+        req.file.buffer,
+        req.file.originalname,
+        "ads"
+      );
 
-      const newAd = new adsModels({ imageUrl: url, link });
+      const newAd = new adsModels({ imageUrl: relativePath, link });
       await newAd.save();
 
       // Find or create the single Slider document
@@ -60,15 +66,25 @@ class AdsController {
 
       if (req.file) {
         if (existingAd.imageUrl) {
-          const oldFilePath = getFilePath3(path.basename(existingAd.imageUrl));
-          fs.unlink(oldFilePath, (err) => {
-            if (err) {
-              console.error("Failed to delete the old avatar:", err);
-            }
-          });
+          const oldS3Key = `images${existingAd.imageUrl}`;
+          try {
+            await s3Client.send(
+              new DeleteObjectCommand({
+                Bucket: process.env.AWS_S3_BUCKET_NAME,
+                Key: oldS3Key,
+              })
+            );
+          } catch (err) {
+            console.error("Failed to delete old S3 image:", err);
+          }
         }
 
-        updateData.imageUrl = `/ads/${req.file.filename}`;
+        const newImagePath = await uploadToS3(
+          req.file.buffer,
+          req.file.originalname,
+          "ads"
+        );
+        updateData.imageUrl = newImagePath;
       }
 
       // Update the author
@@ -106,12 +122,17 @@ class AdsController {
 
       // Delete associated image file
       if (ads.imageUrl) {
-        const oldFilePath = getFilePath3(path.basename(ads.imageUrl));
-        fs.unlink(oldFilePath, (err) => {
-          if (err) {
-            console.error("Failed to delete the ad image:", err);
-          }
-        });
+        const s3Key = `images${ads.imageUrl}`;
+        try {
+          await s3Client.send(
+            new DeleteObjectCommand({
+              Bucket: process.env.AWS_S3_BUCKET_NAME,
+              Key: s3Key,
+            })
+          );
+        } catch (err) {
+          console.error("Failed to delete S3 ad image:", err);
+        }
       }
 
       res.json({ message: "Ad deleted successfully" });

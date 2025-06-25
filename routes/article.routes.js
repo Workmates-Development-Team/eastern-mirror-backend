@@ -9,14 +9,14 @@ const router = express.Router();
 router.post(
   "/add",
   authMiddleware,
-  thumbnailUpload.single("image"),
+  thumbnailUpload,
   ArticleController.add
 );
 
 router.put(
   "/edit/:id",
   authMiddleware,
-  thumbnailUpload.single("image"),
+thumbnailUpload,
   ArticleController.edit
 );
 

@@ -10,14 +10,14 @@ router.get("/", AdsController.getAds);
 router.post(
   "/add",
   authMiddleware,
-  adsUpload.single("thumbnail"),
+  adsUpload,
   AdsController.addAds
 );
 
 router.put(
   "/update/:id",
   authMiddleware,
-  adsUpload.single("thumbnail"),
+  adsUpload,
   AdsController.updateAds
 );
 router.delete(

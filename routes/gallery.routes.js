@@ -9,7 +9,7 @@ const router = express.Router();
 router.post(
   "/upload",
   authMiddleware,
-  thumbnailUpload.single("thumbnail"),
+  thumbnailUpload,
   GalleryController.upload
 );
 router.delete(

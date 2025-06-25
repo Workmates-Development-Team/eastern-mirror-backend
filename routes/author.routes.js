@@ -8,13 +8,13 @@ const router = express.Router();
 router.post(
   "/add",
   authMiddleware,
-  avatarUpload.single("avatar"),
+  avatarUpload,
   AuthorController.add
 );
 router.put(
   "/update/:id",
   authMiddleware,
-  avatarUpload.single("avatar"),
+  avatarUpload,
   AuthorController.update
 );
 router.delete("/soft-delete/:id", authMiddleware, AuthorController.softDelete);

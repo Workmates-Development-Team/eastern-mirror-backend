@@ -360,7 +360,6 @@ class ArticleController {
   }
 
   static async searchArticle(req, res) {
-    console.log("object");
     try {
       const {
         page = 1,

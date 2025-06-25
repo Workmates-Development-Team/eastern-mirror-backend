@@ -2,9 +2,14 @@ import galleryModels from "../models/gallery.models.js";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import { unlink } from "fs/promises";
+import { s3Client, uploadToS3 } from "../utils/uploadToS3.js";
+import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import dotenv from 'dotenv';
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
 
 class GalleryController {
   static async upload(req, res) {
@@ -19,10 +24,21 @@ class GalleryController {
         return res.status(400).json({ message: "Name is required" });
       }
 
-      let url = `/article/${req.file.filename}`;
+      // let url = `/article/${req.file.filename}`;
+      // const url = req.file.location;
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const folder = `${year}/${month}`;
+      const key = await uploadToS3(
+        req.file.buffer,
+        req.file.originalname,
+        folder
+      );
 
       const newImage = new galleryModels({
-        url,
+        url: key,
         name,
         caption,
       });
@@ -31,7 +47,9 @@ class GalleryController {
 
       res.status(201).json({ message: "File uploaded successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Internal Server Error", error: error.message });
+      res
+        .status(500)
+        .json({ message: "Internal Server Error", error: error.message });
     }
   }
 
@@ -43,16 +61,21 @@ class GalleryController {
       if (!image) {
         return res.status(404).json({ message: "Image not found" });
       }
-      const filePath = path.join(__dirname, "../uploads", image.url);
 
-      await unlink(filePath);
+      const s3Key = `images${image.url}`;
+
+        const command = new DeleteObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: s3Key,
+      });
+
+      await s3Client.send(command);
+
       await galleryModels.findByIdAndDelete(id);
 
       res.status(200).json({ message: "Image deleted successfully" });
     } catch (error) {
-      if (error.code === "ENOENT") {
-        return res.status(404).json({ message: "File not found on server" });
-      }
+      console.log(error)
       res
         .status(500)
         .json({ message: "Internal Server Error", error: error.message });
@@ -80,7 +103,9 @@ class GalleryController {
         currentPage: parseInt(page),
       });
     } catch (error) {
-      res.status(500).json({ message: "Internal Server Error", error: error.message });
+      res
+        .status(500)
+        .json({ message: "Internal Server Error", error: error.message });
     }
   }
 
@@ -103,12 +128,14 @@ class GalleryController {
         return res.status(404).json({ message: "Image not found" });
       }
 
-      res.status(200).json({ 
-        message: "Caption updated successfully", 
-        updatedImage 
+      res.status(200).json({
+        message: "Caption updated successfully",
+        updatedImage,
       });
     } catch (error) {
-      res.status(500).json({ message: "Internal Server Error", error: error.message });
+      res
+        .status(500)
+        .json({ message: "Internal Server Error", error: error.message });
     }
   }
 }
